@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<project name="example_proj_dev" basedir="." default="dbdeploy">
+
+	<taskdef name="dbdeploy" classname="phing.tasks.ext.dbdeploy.DbDeployTask"/>
+
+	<target name="prepare">
+		<mkdir dir="build"/>
+	</target>
+
+	<target name="clean">
+		<delete dir="build"/>
+	</target>	
+	
+    <target name="dbdeploy" description="generate a sql change script">
+    	<delete dir="build/dbdeploy"/>
+    	<mkdir dir="build/dbdeploy"/>
+		<dbdeploy 
+		 	configFile="${project.basedir}/dbdeploy/${phing.project.name}.ini"
+		/>
+    </target>
+
+</project>

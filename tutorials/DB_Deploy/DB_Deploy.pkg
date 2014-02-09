@@ -1,0 +1,120 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<refentry id="{@id}">
+	<refnamediv>
+		<refname>User Guide for DB_Deploy</refname>
+		<refpurpose>To demonstrate the usage of DB_Deploy</refpurpose>
+	</refnamediv>
+	<refsynopsisdiv>
+		<author>Luke Crouch
+			<authorblurb>>{@link mailto:luke.crouch@gmail.com}</authorblurb>
+		</author>
+	</refsynopsisdiv>
+	{@toc}
+	<refsect1 id="{@id intro}">
+		<title>intro</title>
+		<para>dbdeploy is a Database Change Management tool. It's for developers or
+DBAs who want to evolve their database design - or refactor their
+database - in a simple, controlled, flexible and frequent manner. See {@link http://dbdeploy.com dbdeploy.com} for more.</para>
+	</refsect1>
+	<refsect1 id="{@id installation}">
+		<title>installation</title>
+		<para>Download the DB_Deploy .tgz file from {@link http://sourceforge.net/project/peardbdeploy SourceForge}</para>
+		<para>Install with pear command</para>
+		<programlisting>pear install DB_Deploy-0.9.2.tgz</programlisting>
+	</refsect1>
+	<refsect1 id="{@id project}">
+		<title>project setup</title>
+		<para>To use dbdeploy, you must follow certain conventions in your project directory 
+		(these are not all configurable, yet):
+		<itemizedlist>
+			<listitem>Create a table called 'changelog' in the database</listitem>
+			<listitem>Create a directory called 'dbdeploy'</listitem>
+			<listitem>Within the dbdeploy directory, create a dbdeploy.ini file for configuration</listitem>
+			<listitem>Within the dbdeploy directory, create another directory called "deltas"</listitem>
+			<listitem>Within the "deltas" directory, SQL script files for deployment and rollback of DB changes</listitem>
+		</itemizedlist>
+		Each of these conventions are explained in more detail below. To see a small example project, {@link http://peardbdeploy.sourceforge.net/example_proj/ click here}.
+		</para>
+	</refsect1>
+	<refsect1 id="{@id changelog}">
+		<title>changelog table</title>
+		<para>dbdeploy relies on the following table in the database in order to track which revisions have deployed to the DB.</para>
+		<programlisting role="sql">
+CREATE TABLE changelog (
+  change_number bigint(20) NOT NULL,
+  delta_set varchar(10) NOT NULL,
+  start_dt timestamp NOT NULL default CURRENT_TIMESTAMP on update CURRENT_TIMESTAMP,
+  complete_dt timestamp NULL default NULL,
+  applied_by varchar(100) NOT NULL,
+  description varchar(500) NOT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8;
+		</programlisting>
+		<para>Note: this SQL is for MySQL, but the same table can be built in any DB. Just ensure the column names are the same, 
+		and the types are comparable.</para>
+	</refsect1>
+	<refsect1 id="{@id .ini}">
+		<title>.ini</title>
+		<para>.ini config file(s) is/are used to specify settings for DB_Deploy.
+		You can keep multiple .ini files to connect to multiple databases - e.g., dev.ini, test.ini, prod.ini.
+		The structure of the file should be as follows:</para>
+		<programlisting>
+<![CDATA[		
+[dbdeploy]
+	url = sqlite:./db.sqlite
+	userid = dbdeploy
+	password = dbdeploy
+	outputFile = dbdeploy/dbdeploy_deploy.sql
+	undoOutputFile = dbdeploy/dbdeploy_undo.sql
+	deltaDir = dbdeploy/deltas
+]]>	
+		</programlisting>
+		<itemizedlist>
+			<listitem>url - PDO url for connection to the database</listitem>
+			<listitem>username - username for connection to the database</listitem>
+			<listitem>password - password for connection to the database</listitem>
+			<listitem>outputFile - name of the file which will hold the aggregated SQL for deploying all deltas</listitem>
+			<listitem>undoOutputFile - name of the file which will hold the aggregated SQL for rolling back all deltas</listitem>
+			<listitem>deltaDir - the directory in which all delta files are stored</listitem>
+		</itemizedlist>
+		<para>Note: Only a url value is required; DB_Deploy will use the other values above by default. 
+		But you may specify your own values to override these defaults.</para>
+	</refsect1>
+	<refsect1 id="{@id delta scripts}">
+		<title>delta scripts</title>
+		<para>Place all delta scripts into the dbdeploy/deltas directory. You should follow the 
+		{@link http://dbdeploy.com/documentation/getting-started/rules-for-using-dbdeploy/ rules for dbdeploy usage}</para>
+		<itemizedlist>
+			<listitem>Make sure that EVERY database modification is written as a delta script to be picked up by dbdeploy.</listitem>
+			<listitem>Follow the naming convention for delta scripts. Script names must begin with a number that indicates 
+			the order in which it should be run (1.sql gets run first, then 2.sql and so on). You can optionally add a comment 
+			to the file name to describe what the script does (eg 1 Created the CustomerAddress table.sql) the comment will get 
+			written to the schema version table as the script is applied.</listitem>
+			<listitem>You can optionally add an undo section to your script. Write the script so it performs the do action first 
+			(eg create the CustomerAddress table) once all do actions have been scripted include the token --//@UNDO on a new line. 
+			Include the undo steps after this token.</listitem>
+			<listitem>If you realise that you've made a mistake in a delta script that’s been checked in then consider carefully 
+			how to fix it.</listitem>
+		</itemizedlist>
+	</refsect1>
+	<refsect1 id="{@id usage}">
+		<title>using dbdeploy</title>
+		<para>Assumming you have followed the instructions and rules as above, you can now roll up your DB changes by simply using the 
+		dbdeploy command from within your project directory.</para>
+		<programlisting>
+<![CDATA[		
+$ dbdeploy -c dbdeploy/example_proj_prod.ini
+setting configFile to: dbdeploy/example_proj_prod.ini
+Getting applied changed numbers from DB at: sqlite:./prod.sqlite
+Current db revision: 0
+Creating deploy SQL file, dbdeploy/dbdeploy_deploy.sql
+        adding deploy SQL from 001_create_test_table.sql ... done.
+        adding deploy SQL from 002_add_test_record.sql ... done.
+Creating undo SQL file, dbdeploy/dbdeploy_undo.sql
+        adding undo SQL from 002_add_test_record.sql ... done.
+        adding undo SQL from 001_create_test_table.sql ... done.
+]]>	
+		</programlisting>
+		<para>It will aggregate the SQL from the necessary delta script files,
+		and create the output files as specified in the config file.</para>
+	</refsect1>
+</refentry>

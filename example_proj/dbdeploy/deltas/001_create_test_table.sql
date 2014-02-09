@@ -1,0 +1,5 @@
+CREATE TABLE test (id integer NOT NULL PRIMARY KEY AUTOINCREMENT,test varchar NOT NULL);
+
+--//@UNDO
+
+DROP TABLE test;

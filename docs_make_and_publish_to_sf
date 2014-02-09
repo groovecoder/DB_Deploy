@@ -1,0 +1,2 @@
+phpdoc -t docs -d DB,tutorials -o HTML:frames:phphtmllib -ti PEAR:DB::Deploy
+scp -r docs sfshell:/home/groups/p/pe/peardbdeploy/htdocs
